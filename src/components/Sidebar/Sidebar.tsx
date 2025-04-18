@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Package, Grid, Users, FileText, LogOut } from 'lucide-react';
+import { Home, Package, Grid, Users, FileText, LogOut, Boxes } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface SidebarProps {
@@ -11,6 +11,7 @@ interface SidebarProps {
 const menuItems = [
   { icon: Home, label: 'Dashboard', value: 'dashboard' },
   { icon: Package, label: 'Products', value: 'products' },
+  { icon: Boxes, label: 'Stocks', value: 'stocks' },
   { icon: Grid, label: 'Categories', value: 'categories' },
   { icon: Users, label: 'Customers', value: 'customers' },
   { icon: FileText, label: 'Orders', value: 'orders' },

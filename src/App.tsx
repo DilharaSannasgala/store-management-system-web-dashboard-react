@@ -9,6 +9,7 @@ import LoginScreen from './components/Auth/LoginScreen';
 import ProductList from './components/Products/ProductList';
 import CategoryList from './components/Categories/CategoryList';
 import CustomerList from './components/Customers/CustomerList';
+import StockList from './components/Stocks/StockList';
 
 export interface UserData {
   name: string;
@@ -90,6 +91,8 @@ function App() {
     switch (currentPage) {
       case 'products':
         return <ProductList />;
+      case 'stocks':
+        return <StockList />;
       case 'categories':
         return <CategoryList />;
       case 'customers':
