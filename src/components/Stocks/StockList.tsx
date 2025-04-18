@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Plus, AlertTriangle, Eye } from 'lucide-react';
 import DataTable from '../Common/Table/DataTable';
 import LoadingSpinner from '../Loading/LoadingSpinner';
 import ProductDetailModal from './ProductDetailModal';
+import AddStockForm from './AddStockForm';
 import ConfirmationModal from '../Common/Modal/ConfirmationModal';
 import { debounce } from 'lodash';
 
@@ -22,7 +23,7 @@ interface Product {
 
 interface Stock {
   _id: string;
-  product: Product;
+  product: Product | string; // Can be either a Product object or just the ID as string
   batchNumber: string;
   quantity: number;
   size: string;
@@ -32,6 +33,11 @@ interface Stock {
   supplier: string;
   createdAt: string;
 }
+
+// Type guard to check if product is a Product object or just an ID
+const isProductObject = (product: Product | string): product is Product => {
+  return typeof product !== 'string' && product !== null && typeof product === 'object';
+};
 
 interface ConfirmationConfig {
   isOpen: boolean;
@@ -51,6 +57,10 @@ const StockList = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [stockToEdit, setStockToEdit] = useState<Stock | null>(null);
+  const [showAddForm, setShowAddForm] = useState(false);
+  
+  // Add product cache
+  const [productCache, setProductCache] = useState<Record<string, Product>>({});
   
   const [confirmation, setConfirmation] = useState<ConfirmationConfig>({
     isOpen: false,
@@ -63,12 +73,100 @@ const StockList = () => {
 
   const token = localStorage.getItem('token');
 
+  // Function to fetch a single product by ID
+  const fetchProductById = useCallback(async (productId: string): Promise<Product | null> => {
+    try {
+      const response = await fetch(`http://localhost:3000/product/${productId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch product');
+      }
+      
+      const data = await response.json();
+      
+      if (data.status === 'SUCCESS') {
+        return data.data;
+      } else {
+        throw new Error(data.message || 'Unknown error occurred');
+      }
+    } catch (error) {
+      console.error('Error fetching product:', error);
+      return null;
+    }
+  }, [token]);
+
+  // Function to load all products and update the cache
+  const fetchAllProducts = useCallback(async () => {
+    try {
+      const response = await fetch('http://localhost:3000/product/all-products', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch products');
+      }
+      
+      const data = await response.json();
+      
+      if (data.status === 'SUCCESS') {
+        const newCache: Record<string, Product> = {};
+        data.data.forEach((product: Product) => {
+          newCache[product._id] = product;
+        });
+        setProductCache(newCache);
+        return newCache;
+      } else {
+        throw new Error(data.message || 'Unknown error occurred');
+      }
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      return null;
+    }
+  }, [token]);
+
+  // Process stocks to ensure product data is loaded
+  const processStocks = useCallback(async (stocksData: Stock[], cache: Record<string, Product>) => {
+    const processedStocks = await Promise.all(
+      stocksData.map(async (stock) => {
+        // If product is just an ID string
+        if (typeof stock.product === 'string') {
+          const productId = stock.product;
+          // Check cache first
+          if (cache[productId]) {
+            return { ...stock, product: cache[productId] };
+          } else {
+            // Fetch if not in cache
+            const product = await fetchProductById(productId);
+            if (product) {
+              // Update cache
+              setProductCache(prev => ({ ...prev, [productId]: product }));
+              return { ...stock, product };
+            }
+          }
+        }
+        return stock;
+      })
+    );
+    
+    return processedStocks;
+  }, [fetchProductById]);
+
   useEffect(() => {
     const fetchStocks = async () => {
       setIsLoading(true);
       setError(null);
       
       try {
+        // First, fetch and cache all products
+        const productCacheData = await fetchAllProducts();
+        
+        // Then fetch stocks
         const response = await fetch('http://localhost:3000/stock/all-stocks', {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -82,8 +180,10 @@ const StockList = () => {
         const data = await response.json();
         
         if (data.status === 'SUCCESS') {
-          setStocks(data.data);
-          setFilteredStocks(data.data);
+          // Process stocks to ensure product data
+          const processedStocks = await processStocks(data.data, productCacheData || {});
+          setStocks(processedStocks);
+          setFilteredStocks(processedStocks);
         } else {
           throw new Error(data.message || 'Unknown error occurred');
         }
@@ -95,7 +195,7 @@ const StockList = () => {
     };
 
     fetchStocks();
-  }, [token]);
+  }, [token, fetchAllProducts, processStocks]);
 
   const handleProductView = (product: Product) => {
     setSelectedProduct(product);
@@ -110,7 +210,7 @@ const StockList = () => {
     setConfirmation({
       isOpen: true,
       title: 'Confirm Deletion',
-      message: `Are you sure you want to delete stock for "${stock.product.name}" (${stock.batchNumber})? This action can be reversed later.`,
+      message: `Are you sure you want to delete stock for "${isProductObject(stock.product) ? stock.product.name : 'Unknown Product'}" (${stock.batchNumber})? This action can be reversed later.`,
       confirmButtonText: 'Delete',
       cancelButtonText: 'Cancel',
       itemToDelete: stock,
@@ -146,12 +246,15 @@ const StockList = () => {
 
   const handleSearch = debounce((query: string) => {
     setFilteredStocks(
-      stocks.filter(stock =>
-        stock.product.name.toLowerCase().includes(query.toLowerCase()) ||
-        stock.product.productCode.toLowerCase().includes(query.toLowerCase()) ||
-        stock.batchNumber.toLowerCase().includes(query.toLowerCase()) ||
-        stock.supplier.toLowerCase().includes(query.toLowerCase())
-      )
+      stocks.filter(stock => {
+        const productName = isProductObject(stock.product) ? stock.product.name.toLowerCase() : '';
+        const productCode = isProductObject(stock.product) ? stock.product.productCode.toLowerCase() : '';
+        
+        return productName.includes(query.toLowerCase()) ||
+          productCode.includes(query.toLowerCase()) ||
+          stock.batchNumber.toLowerCase().includes(query.toLowerCase()) ||
+          stock.supplier.toLowerCase().includes(query.toLowerCase());
+      })
     );
   }, 300);
 
@@ -159,6 +262,41 @@ const StockList = () => {
     const query = e.target.value;
     setSearchQuery(query);
     handleSearch(query);
+  };
+
+  const handleAddStock = async (newStock: Stock) => {
+    // If the new stock has just a product ID, fetch the full product data
+    if (typeof newStock.product === 'string') {
+      const productId = newStock.product;
+      
+      // Try to get from cache first
+      let productData = productCache[productId];
+      
+      // If not in cache, fetch it
+      if (!productData) {
+        productData = (await fetchProductById(productId)) as Product;
+        
+        // Update cache with the new product
+        if (productData) {
+          setProductCache(prev => ({
+            ...prev,
+            [productId]: productData
+          }));
+        }
+      }
+      
+      // Update the stock with the full product data
+      if (productData) {
+        newStock = {
+          ...newStock,
+          product: productData
+        };
+      }
+    }
+    
+    setStocks(prev => [...prev, newStock]);
+    setFilteredStocks(prev => [...prev, newStock]);
+    setShowAddForm(false);
   };
 
   const formatDate = (dateString: string) => {
@@ -180,16 +318,19 @@ const StockList = () => {
       header: 'Product', 
       accessor: (item: Stock) => (
         <div className="flex items-center">
-          {item.product.name}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleProductView(item.product);
-            }}
-            className="ml-2 text-indigo-600 hover:text-indigo-800"
-          >
-            <Eye size={16} />
-          </button>
+          {isProductObject(item.product) ? item.product.name : 'Loading...'}
+          {isProductObject(item.product) && (
+            <button
+              title="View product details"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleProductView(item.product as Product);
+              }}
+              className="ml-2 text-indigo-600 hover:text-indigo-800"
+            >
+              <Eye size={16} />
+            </button>
+          )}
         </div>
       ) 
     },
@@ -213,7 +354,7 @@ const StockList = () => {
     { header: 'Supplier', accessor: (item: Stock) => item.supplier },
     { 
       header: 'Last Restocked', 
-      accessor: (item: Stock) => formatDate(item.lastRestocked) 
+      accessor: (item: Stock) => item.lastRestocked ? formatDate(item.lastRestocked) : 'N/A' 
     }
   ];
 
@@ -245,6 +386,7 @@ const StockList = () => {
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
+              onClick={() => setShowAddForm(true)}
               className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2"
             >
               <Plus size={20} />
@@ -270,6 +412,16 @@ const StockList = () => {
               <ProductDetailModal
                 product={selectedProduct}
                 onClose={() => setSelectedProduct(null)}
+              />
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {showAddForm && (
+              <AddStockForm
+                onClose={() => setShowAddForm(false)}
+                onSubmit={handleAddStock}
+                productCache={productCache}
               />
             )}
           </AnimatePresence>

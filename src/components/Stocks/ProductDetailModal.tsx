@@ -7,12 +7,7 @@ interface Product {
   name: string;
   productCode: string;
   description: string;
-  size: string;
-  color: string;
-  price: number;
-  category: string;
   images: string[];
-  createdAt: string;
 }
 
 interface ProductDetailModalProps {
@@ -35,15 +30,6 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product, onClos
     if (product.images.length > 1) {
       setCurrentImageIndex((prev) => (prev - 1 + product.images.length) % product.images.length);
     }
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
   };
 
   return (
@@ -82,25 +68,25 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product, onClos
                     alt={product.name}
                     className="w-full h-full object-contain"
                   />
-                  
+
                   {product.images.length > 1 && (
                     <>
-                      <button 
+                      <button
                         onClick={goToPrevImage}
                         className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-70 p-2 rounded-full"
                       >
                         <ChevronLeft size={20} />
                       </button>
-                      <button 
+                      <button
                         onClick={goToNextImage}
                         className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-70 p-2 rounded-full"
                       >
                         <ChevronRight size={20} />
                       </button>
-                      
+
                       <div className="absolute bottom-2 left-0 right-0 flex justify-center space-x-2">
                         {product.images.map((_, idx) => (
-                          <div 
+                          <div
                             key={idx}
                             className={`w-2 h-2 rounded-full ${currentImageIndex === idx ? 'bg-indigo-600' : 'bg-gray-300'}`}
                           />
@@ -122,26 +108,7 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product, onClos
                 <h2 className="text-2xl font-bold">{product.name}</h2>
                 <p className="text-gray-600">Product Code: {product.productCode}</p>
               </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-gray-500">Size</p>
-                  <p className="font-medium">{product.size}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Color</p>
-                  <p className="font-medium">{product.color}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Price</p>
-                  <p className="font-medium">${product.price.toFixed(2)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Created</p>
-                  <p className="font-medium">{formatDate(product.createdAt)}</p>
-                </div>
-              </div>
-              
+
               <div>
                 <p className="text-sm text-gray-500">Description</p>
                 <p className="mt-1">{product.description}</p>
