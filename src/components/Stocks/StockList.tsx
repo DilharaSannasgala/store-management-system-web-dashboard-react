@@ -5,6 +5,7 @@ import DataTable from '../Common/Table/DataTable';
 import LoadingSpinner from '../Loading/LoadingSpinner';
 import ProductDetailModal from './ProductDetailModal';
 import AddStockForm from './AddStockForm';
+import EditStockForm from './EditStockForm';
 import ConfirmationModal from '../Common/Modal/ConfirmationModal';
 import { debounce } from 'lodash';
 
@@ -13,17 +14,16 @@ interface Product {
   name: string;
   productCode: string;
   description: string;
-  size: string;
-  color: string;
-  price: number;
-  category: string;
+  category: {
+    _id: string;
+    name: string;
+  } | string;
   images: string[];
-  createdAt: string;
 }
 
 interface Stock {
   _id: string;
-  product: Product | string; // Can be either a Product object or just the ID as string
+  product: Product | string;
   batchNumber: string;
   quantity: number;
   size: string;
@@ -203,7 +203,6 @@ const StockList = () => {
 
   const handleEdit = (stock: Stock) => {
     setStockToEdit(stock);
-    // You would implement an edit form similar to how it's done in ProductList
   };
 
   const handleDelete = (stock: Stock) => {
@@ -417,12 +416,27 @@ const StockList = () => {
           </AnimatePresence>
 
           <AnimatePresence>
-            {showAddForm && (
-              <AddStockForm
-                onClose={() => setShowAddForm(false)}
-                onSubmit={handleAddStock}
+            {stockToEdit && (
+              <EditStockForm
+                stock={stockToEdit}
+                onClose={() => setStockToEdit(null)}
+                onUpdate={(updatedStock) => {
+                  setStocks(prev => prev.map(s => s._id === updatedStock._id ? updatedStock : s));
+                  setFilteredStocks(prev => prev.map(s => s._id === updatedStock._id ? updatedStock : s));
+                  setStockToEdit(null);
+                }}
                 productCache={productCache}
               />
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {showAddForm && (
+              <AddStockForm
+              onClose={() => setShowAddForm(false)}
+              onSubmit={handleAddStock}
+              productCache={productCache}
+            />
             )}
           </AnimatePresence>
 

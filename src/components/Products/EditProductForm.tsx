@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { X, Upload } from 'lucide-react';
+import { X, Upload, Info, AlertTriangle } from 'lucide-react';
 import LoadingSpinner from '../Loading/LoadingSpinner';
 import { updateProduct } from '../../services/productService';
 import { fetchCategories } from '../../services/categoryService';
@@ -42,10 +42,52 @@ const EditProductForm: React.FC<EditProductFormProps> = ({ product, onClose, onU
   });
   const [previewImages, setPreviewImages] = useState<string[]>(product.images);
   const [errorMessage, setErrorMessage] = useState('');
+  const [infoMessage, setInfoMessage] = useState('');
   const [categoryMap, setCategoryMap] = useState<Record<string, string>>({});
   const modalRef = useRef<HTMLDivElement>(null);
+  
+  // Store initial state to compare against
+  const initialFormData = useRef({
+    name: product.name,
+    productCode: product.productCode,
+    description: product.description || '',
+    category: product.category._id,
+    images: [...product.images],
+    removedImages: [] as string[]
+  });
 
   const token = localStorage.getItem('token');
+  
+  // Function to check if form data has changed
+  const hasFormChanged = () => {
+    // Check text fields
+    if (
+      formData.name !== initialFormData.current.name ||
+      formData.description !== initialFormData.current.description ||
+      formData.category !== initialFormData.current.category
+    ) {
+      return true;
+    }
+    
+    // Check if images have been added or removed
+    if (formData.images.length !== initialFormData.current.images.length) {
+      return true;
+    }
+    
+    // Check if any images have been removed
+    if (formData.removedImages.length > 0) {
+      return true;
+    }
+    
+    // Check if any new images have been added (File objects)
+    const hasNewImages = formData.images.some(img => img instanceof File);
+    if (hasNewImages) {
+      return true;
+    }
+    
+    // No changes detected
+    return false;
+  };
 
   useEffect(() => {
     const loadCategories = async () => {
@@ -77,8 +119,18 @@ const EditProductForm: React.FC<EditProductFormProps> = ({ product, onClose, onU
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    
+    // Clear previous messages
     setErrorMessage('');
+    setInfoMessage('');
+    
+    // Check if form data has changed
+    if (!hasFormChanged()) {
+      setInfoMessage('No changes detected. Update skipped.');
+      return;
+    }
+    
+    setIsLoading(true);
 
     try {
       const productData = new FormData();
@@ -141,6 +193,11 @@ const EditProductForm: React.FC<EditProductFormProps> = ({ product, onClose, onU
       ...prev,
       [name]: value
     }));
+    
+    // Clear info message when user starts making changes
+    if (infoMessage) {
+      setInfoMessage('');
+    }
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -157,6 +214,11 @@ const EditProductForm: React.FC<EditProductFormProps> = ({ product, onClose, onU
       // Create preview URLs for display only
       const newPreviewUrls = newFiles.map(file => URL.createObjectURL(file));
       setPreviewImages(prev => [...prev, ...newPreviewUrls]);
+      
+      // Clear info message when user starts making changes
+      if (infoMessage) {
+        setInfoMessage('');
+      }
     }
   };
 
@@ -180,6 +242,11 @@ const EditProductForm: React.FC<EditProductFormProps> = ({ product, onClose, onU
     }));
 
     setPreviewImages(prev => prev.filter((_, i) => i !== index));
+    
+    // Clear info message when user starts making changes
+    if (infoMessage) {
+      setInfoMessage('');
+    }
   };
 
   return (
@@ -206,10 +273,19 @@ const EditProductForm: React.FC<EditProductFormProps> = ({ product, onClose, onU
         </div>
         <form onSubmit={handleSubmit} className="p-6">
           {errorMessage && (
-            <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">
-              {errorMessage}
+            <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg flex items-center">
+              <AlertTriangle size={20} className="mr-2" />
+              <span>{errorMessage}</span>
             </div>
           )}
+          
+          {infoMessage && (
+            <div className="mb-4 p-3 bg-blue-100 text-blue-700 rounded-lg flex items-center">
+              <Info size={20} className="mr-2" />
+              <span>{infoMessage}</span>
+            </div>
+          )}
+          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -329,7 +405,7 @@ const EditProductForm: React.FC<EditProductFormProps> = ({ product, onClose, onU
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               type="submit"
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+              className={`px-4 py-2 ${hasFormChanged() ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-gray-400'} text-white rounded-lg`}
               disabled={isLoading}
             >
               {isLoading ? 'Updating...' : 'Update Product'}

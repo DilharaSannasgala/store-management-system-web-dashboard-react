@@ -27,6 +27,7 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({ images, onClose }) => {
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold">Product Images</h3>
             <button
+              aria-label="Close image preview"
               onClick={onClose}
               className="p-1 hover:bg-gray-100 rounded-full"
             >

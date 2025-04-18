@@ -53,6 +53,7 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product, onClos
             <button
               onClick={onClose}
               className="p-1 hover:bg-gray-100 rounded-full"
+              aria-label="Close product details"
             >
               <X size={20} />
             </button>
@@ -74,12 +75,14 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({ product, onClos
                       <button
                         onClick={goToPrevImage}
                         className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-70 p-2 rounded-full"
+                        aria-label="Previous image"
                       >
                         <ChevronLeft size={20} />
                       </button>
                       <button
                         onClick={goToNextImage}
                         className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-70 p-2 rounded-full"
+                        aria-label="Next image"
                       >
                         <ChevronRight size={20} />
                       </button>

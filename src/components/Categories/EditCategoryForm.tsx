@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Info } from 'lucide-react';
 import { updateCategory } from '../../services/categoryService';
 
 interface Category {
@@ -22,12 +22,24 @@ const EditCategoryForm: React.FC<EditCategoryFormProps> = ({ category, onClose, 
   const [description, setDescription] = useState(category.description);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [infoMessage, setInfoMessage] = useState('');
   const modalRef = useRef<HTMLDivElement>(null);
+  
+  // Store initial values for comparison
+  const initialValues = useRef({
+    name: category.name,
+    description: category.description
+  });
 
   // Update form if category prop changes
   useEffect(() => {
     setName(category.name);
     setDescription(category.description);
+    // Also update the initial values reference when category changes
+    initialValues.current = {
+      name: category.name,
+      description: category.description
+    };
   }, [category]);
 
   useEffect(() => {
@@ -43,11 +55,26 @@ const EditCategoryForm: React.FC<EditCategoryFormProps> = ({ category, onClose, 
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [onClose]);
+  
+  // Function to check if form data has changed
+  const hasFormChanged = () => {
+    return name !== initialValues.current.name || description !== initialValues.current.description;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
+    
+    // Clear previous messages
     setError('');
+    setInfoMessage('');
+    
+    // Check if form data has changed
+    if (!hasFormChanged()) {
+      setInfoMessage('No changes detected. Update skipped.');
+      return;
+    }
+    
+    setIsSubmitting(true);
 
     try {
       const token = localStorage.getItem('token');
@@ -64,6 +91,21 @@ const EditCategoryForm: React.FC<EditCategoryFormProps> = ({ category, onClose, 
       console.error('Error updating category:', error);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+  
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    
+    if (name === 'name') {
+      setName(value);
+    } else if (name === 'description') {
+      setDescription(value);
+    }
+    
+    // Clear info message when user starts making changes
+    if (infoMessage) {
+      setInfoMessage('');
     }
   };
 
@@ -120,6 +162,18 @@ const EditCategoryForm: React.FC<EditCategoryFormProps> = ({ category, onClose, 
             <span>{error}</span>
           </motion.div>
         )}
+        
+        {infoMessage && (
+          <motion.div
+            className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded mb-4 flex items-center"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            transition={{ duration: 0.3 }}
+          >
+            <Info size={20} className="mr-2" />
+            <span>{infoMessage}</span>
+          </motion.div>
+        )}
 
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
@@ -128,9 +182,10 @@ const EditCategoryForm: React.FC<EditCategoryFormProps> = ({ category, onClose, 
             </label>
             <input
               id="name"
+              name="name"
               type="text"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={handleInputChange}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
               required
               placeholder="Enter category name"
@@ -144,8 +199,9 @@ const EditCategoryForm: React.FC<EditCategoryFormProps> = ({ category, onClose, 
             </label>
             <textarea
               id="description"
+              name="description"
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={handleInputChange}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
               rows={3}
               placeholder="Enter category description"
@@ -164,7 +220,7 @@ const EditCategoryForm: React.FC<EditCategoryFormProps> = ({ category, onClose, 
             <motion.button
               type="submit"
               disabled={isSubmitting}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+              className={`px-4 py-2 ${hasFormChanged() ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-gray-400'} text-white rounded-lg disabled:opacity-50`}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
