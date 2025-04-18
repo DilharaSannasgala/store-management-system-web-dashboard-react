@@ -10,6 +10,7 @@ import ProductList from './components/Products/ProductList';
 import CategoryList from './components/Categories/CategoryList';
 import CustomerList from './components/Customers/CustomerList';
 import StockList from './components/Stocks/StockList';
+import OrderList from './components/Order/OrderList';
 
 export interface UserData {
   name: string;
@@ -97,6 +98,8 @@ function App() {
         return <CategoryList />;
       case 'customers':
         return <CustomerList />;
+      case 'orders':
+        return <OrderList/>;
       default:
         return (
           <main className="p-6">

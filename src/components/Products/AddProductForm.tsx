@@ -14,12 +14,12 @@ interface Category {
 interface Product {
   _id: string;
   name: string;
-  description: string;
-  productCode?: string;
-  category: string | {
+  productCode: string;
+  category: {
     _id: string;
     name: string;
   };
+  description: string;
   images: string[];
 }
 

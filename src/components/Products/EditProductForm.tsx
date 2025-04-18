@@ -19,7 +19,7 @@ interface Product {
     _id: string;
     name: string;
   };
-  description?: string;
+  description: string;
   images: string[];
 }
 
