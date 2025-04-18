@@ -3,7 +3,6 @@ import { Search, AlertTriangle, Package, Check, Loader2 } from 'lucide-react';
 import DataTable from '../Common/Table/DataTable';
 import LoadingSpinner from '../Loading/LoadingSpinner';
 import ConfirmationModal from '../Common/Modal/ConfirmationModal';
-import { debounce } from 'lodash';
 import ProductModal from './ProductModal';
 
 interface Customer {
@@ -84,6 +83,7 @@ const OrderList = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeFilter, setActiveFilter] = useState('All');
   const [statusUpdates, setStatusUpdates] = useState<StatusUpdateState>({});
   const [productModal, setProductModal] = useState<ProductModalState>({
     isOpen: false,
@@ -383,25 +383,68 @@ const OrderList = () => {
     setConfirmation(prev => ({ ...prev, isOpen: false }));
   };
 
-  const handleSearch = useCallback(
-    debounce((query: string) => {
-      setFilteredOrders(
-        orders.filter(order =>
-          order.customer.firstName.toLowerCase().includes(query.toLowerCase()) ||
-          order.customer.lastName.toLowerCase().includes(query.toLowerCase()) ||
-          order.status.toLowerCase().includes(query.toLowerCase()) ||
-          order.customer.email?.toLowerCase().includes(query.toLowerCase()) ||
-          order.customer.phone.includes(query)
-        )
+  // Filter orders by status and search query
+  const filterOrders = useCallback(() => {
+    let filtered = orders;
+    
+    // Apply status filter if not 'All'
+    if (activeFilter !== 'All') {
+      filtered = filtered.filter(order => order.status === activeFilter);
+    }
+    
+    // Apply search query filter
+    if (searchQuery) {
+      filtered = filtered.filter(order =>
+        order.customer.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        order.customer.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        order.status.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        order.customer.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        order.customer.phone.includes(searchQuery)
       );
-    }, 300),
-    [orders]
-  );
+    }
+    
+    setFilteredOrders(filtered);
+  }, [orders, activeFilter, searchQuery]);
+
+  // Update filtered orders when filter changes
+  useEffect(() => {
+    filterOrders();
+  }, [filterOrders]);
+
+  const handleFilterClick = (status: string) => {
+    setActiveFilter(status);
+  };
 
   const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value;
     setSearchQuery(query);
-    handleSearch(query);
+  };
+
+  // Render status filter buttons with proper styling
+  const renderFilterButtons = () => {
+    const statuses = ['All', ...orderStatusOptions];
+    
+    return (
+      <div className="flex space-x-2">
+        {statuses.map(status => (
+          <button
+            key={status}
+            onClick={() => handleFilterClick(status)}
+            className={`px-3 py-1 text-sm rounded-md transition-colors ${
+              activeFilter === status
+                ? status === 'Pending' ? 'bg-yellow-500 text-white' :
+                  status === 'Shipped' ? 'bg-blue-500 text-white' :
+                  status === 'Delivered' ? 'bg-green-500 text-white' :
+                  status === 'Cancelled' ? 'bg-red-500 text-white' :
+                  'bg-indigo-500 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            {status}
+          </button>
+        ))}
+      </div>
+    );
   };
 
   return (
@@ -417,7 +460,13 @@ const OrderList = () => {
             </div>
           )}
 
-          <div className="mb-6 flex items-center justify-end space-x-4">
+          <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0 sm:space-x-4">
+            {/* Filter buttons on the left */}
+            <div className="flex-shrink-0">
+              {renderFilterButtons()}
+            </div>
+            
+            {/* Search input on the right */}
             <div className="relative flex-grow max-w-md">
               <input
                 type="text"

@@ -18,6 +18,10 @@ const Header: React.FC<HeaderProps> = ({ currentPage, userName, userEmail }) => 
       title = 'Products';
       subtitle = 'Manage your product inventory';
       break;
+    case 'stocks':
+      title = 'Stocks';
+      subtitle = 'Manage your stock levels';
+      break;
     case 'categories':
       title = 'Categories';
       subtitle = 'Manage product categories';
