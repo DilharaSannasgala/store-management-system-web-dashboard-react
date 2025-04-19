@@ -68,7 +68,7 @@ const CustomerList = () => {
   const columns = [
     {
       header: '#',
-      accessor: (item: Customer, index: number) => index + 1
+      accessor: (_item: Customer, index: number) => index + 1
     },
     {
       header: 'Name',
@@ -131,21 +131,21 @@ const CustomerList = () => {
     setConfirmation(prev => ({ ...prev, isOpen: false }));
   };
 
-  const handleSearch = useCallback(
-    debounce((query: string) => {
+  const handleSearch = useCallback((query: string) => {
+    const debouncedSearch = debounce((searchQuery: string) => {
       setFilteredCustomers(
         customers.filter(customer =>
-          customer.firstName.toLowerCase().includes(query.toLowerCase()) ||
-          customer.lastName.toLowerCase().includes(query.toLowerCase()) ||
-          customer.email?.toLowerCase().includes(query.toLowerCase()) ||
-          customer.phone.includes(query) ||
-          customer.city.toLowerCase().includes(query.toLowerCase()) ||
-          customer.state.toLowerCase().includes(query.toLowerCase())
+          customer.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          customer.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          customer.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          customer.phone.includes(searchQuery) ||
+          customer.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          customer.state.toLowerCase().includes(searchQuery.toLowerCase())
         )
       );
-    }, 300),
-    [customers]
-  );
+    }, 300);
+    debouncedSearch(query);
+  }, [customers]);
 
   const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value;

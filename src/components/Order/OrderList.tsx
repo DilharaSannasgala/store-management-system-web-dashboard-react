@@ -4,6 +4,7 @@ import DataTable from '../Common/Table/DataTable';
 import LoadingSpinner from '../Loading/LoadingSpinner';
 import ConfirmationModal from '../Common/Modal/ConfirmationModal';
 import ProductModal from './ProductModal';
+import { fetchOrders, updateOrderStatus, deleteOrder } from '../../services/orderService';
 
 interface Customer {
   _id: string;
@@ -21,9 +22,6 @@ interface Product {
   name: string;
   productCode: string;
   description: string;
-  size: string;
-  color: string;
-  price: number;
   images: string[];
 }
 
@@ -109,23 +107,9 @@ const OrderList = () => {
       setError(null);
 
       try {
-        const response = await fetch('http://localhost:3000/order/all-orders', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch orders');
-        }
-
-        const result = await response.json();
-        if (result.status === 'SUCCESS') {
-          setOrders(result.data);
-          setFilteredOrders(result.data);
-        } else {
-          throw new Error(result.message || 'Failed to fetch orders');
-        }
+        const ordersData = await fetchOrders(token);
+        setOrders(ordersData);
+        setFilteredOrders(ordersData);
       } catch (error) {
         setError(error instanceof Error ? error.message : 'An unknown error occurred');
       } finally {
@@ -144,24 +128,10 @@ const OrderList = () => {
     }));
 
     try {
-      const response = await fetch(`http://localhost:3000/order/update-order/${orderId}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ status: newStatus })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update order status');
-      }
-
-      // Update order in state
+      await updateOrderStatus(orderId, newStatus, token);
       setOrders(prevOrders => prevOrders.map(order =>
         order._id === orderId ? { ...order, status: newStatus } : order
       ));
-
       setFilteredOrders(prevOrders => prevOrders.map(order =>
         order._id === orderId ? { ...order, status: newStatus } : order
       ));
@@ -208,15 +178,15 @@ const OrderList = () => {
       accessor: (_item: Order, index: number) => index + 1
     },
     {
-        header: 'Address',
-        accessor: (item: Order) => (
-          <div>
-            <div className="text-sm">{item.customer.firstName} {item.customer.lastName}</div>
-            <div className="text-xs">{item.customer.address}</div>
-            <div className="text-xs text-gray-600">{item.customer.city}, {item.customer.state}</div>
-          </div>
-        )
-      },
+      header: 'Address',
+      accessor: (item: Order) => (
+        <div>
+          <div className="text-sm">{item.customer.firstName} {item.customer.lastName}</div>
+          <div className="text-xs">{item.customer.address}</div>
+          <div className="text-xs text-gray-600">{item.customer.city}, {item.customer.state}</div>
+        </div>
+      )
+    },
     {
       header: 'Contact',
       accessor: (item: Order) => (
@@ -269,15 +239,15 @@ const OrderList = () => {
               <option key={status} value={status}>{status}</option>
             ))}
           </select>
-  
+
           {statusUpdates[item._id]?.isLoading && (
             <Loader2 size={16} className="ml-2 animate-spin text-blue-500" />
           )}
-  
+
           {statusUpdates[item._id] && !statusUpdates[item._id].isLoading && !statusUpdates[item._id].error && (
             <Check size={16} className="ml-2 text-green-500" />
           )}
-  
+
           {statusUpdates[item._id]?.error && (
             <span className="ml-2 text-xs text-red-500">Failed</span>
           )}
@@ -296,7 +266,6 @@ const OrderList = () => {
       })
     },
   ];
-  
 
   const handleViewProducts = (items: OrderItem[]) => {
     setProductModal({
@@ -357,18 +326,7 @@ const OrderList = () => {
 
   const performDelete = async (order: Order) => {
     try {
-      const response = await fetch(`http://localhost:3000/order/delete-order/${order._id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete order');
-      }
-
+      await deleteOrder(order._id, token);
       setOrders(prevOrders => prevOrders.filter(o => o._id !== order._id));
       setFilteredOrders(prevOrders => prevOrders.filter(o => o._id !== order._id));
       console.log('Order deleted successfully');
@@ -386,12 +344,12 @@ const OrderList = () => {
   // Filter orders by status and search query
   const filterOrders = useCallback(() => {
     let filtered = orders;
-    
+
     // Apply status filter if not 'All'
     if (activeFilter !== 'All') {
       filtered = filtered.filter(order => order.status === activeFilter);
     }
-    
+
     // Apply search query filter
     if (searchQuery) {
       filtered = filtered.filter(order =>
@@ -402,7 +360,7 @@ const OrderList = () => {
         order.customer.phone.includes(searchQuery)
       );
     }
-    
+
     setFilteredOrders(filtered);
   }, [orders, activeFilter, searchQuery]);
 
@@ -423,7 +381,7 @@ const OrderList = () => {
   // Render status filter buttons with proper styling
   const renderFilterButtons = () => {
     const statuses = ['All', ...orderStatusOptions];
-    
+
     return (
       <div className="flex space-x-2">
         {statuses.map(status => (
@@ -465,7 +423,7 @@ const OrderList = () => {
             <div className="flex-shrink-0">
               {renderFilterButtons()}
             </div>
-            
+
             {/* Search input on the right */}
             <div className="relative flex-grow max-w-md">
               <input

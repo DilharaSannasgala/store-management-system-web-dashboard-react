@@ -7,9 +7,6 @@ interface Product {
   name: string;
   productCode: string;
   description: string;
-  size: string;
-  color: string;
-  price: number;
   images: string[];
 }
 
@@ -139,14 +136,6 @@ const ProductModal: React.FC<ProductModalProps> = ({
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-sm text-gray-500">Color</p>
-                      <p className="mt-1">{products[currentProductIndex]?.stock.product.color}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500">Size</p>
-                      <p className="mt-1">{products[currentProductIndex]?.stock.product.size}</p>
-                    </div>
                     <div>
                       <p className="text-sm text-gray-500">Price</p>
                       <p className="mt-1">${(products[currentProductIndex]?.stock.price / 100).toFixed(2)}</p>

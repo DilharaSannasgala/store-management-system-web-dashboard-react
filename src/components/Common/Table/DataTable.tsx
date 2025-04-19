@@ -47,6 +47,7 @@ const DataTable = <T extends Record<string, any>>({
               className="border rounded-md px-2 py-1"
               value={entriesPerPage}
               onChange={(e) => setEntriesPerPage(Number(e.target.value))}
+              title='Select number of entries per page'
             >
               {[10, 20, 50].map((value) => (
                 <option key={value} value={value}>
@@ -135,6 +136,7 @@ const DataTable = <T extends Record<string, any>>({
             onClick={() => handlePageChange(currentPage - 1)}
             disabled={currentPage === 1}
             className="px-3 py-1 border rounded-md disabled:opacity-50"
+            title="Previous page"
           >
             <ChevronLeft size={20} />
           </button>
@@ -155,6 +157,7 @@ const DataTable = <T extends Record<string, any>>({
             onClick={() => handlePageChange(currentPage + 1)}
             disabled={currentPage === totalPages}
             className="px-3 py-1 border rounded-md disabled:opacity-50"
+            title="Next page"
           >
             <ChevronRight size={20} />
           </button>
