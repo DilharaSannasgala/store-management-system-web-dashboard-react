@@ -3,32 +3,33 @@ import { motion } from 'framer-motion';
 import { X, AlertTriangle, Info } from 'lucide-react';
 import LoadingSpinner from '../Loading/LoadingSpinner';
 import Select from 'react-select';
+import {  updateStock } from '../../services/stockService';
+import { fetchProducts } from '../../services/productService';
 
 interface Product {
+  _id: string;
+  name: string;
+  productCode: string;
+  description: string;
+  category: {
     _id: string;
     name: string;
-    productCode: string;
-    description: string;
-    category: {
-      _id: string;
-      name: string;
-    } | string;
-    images: string[];
-  }
+  } | string;
+  images: string[];
+}
 
-  interface Stock {
-    _id: string;
-    product: Product | string;
-    batchNumber: string;
-    quantity: number;
-    size: string;
-    price: number;
-    lowStockAlert: number;
-    lastRestocked: string;
-    supplier: string;
-    createdAt: string;
-  }
-  
+interface Stock {
+  _id: string;
+  product: Product | string;
+  batchNumber: string;
+  quantity: number;
+  size: string;
+  price: number;
+  lowStockAlert: number;
+  lastRestocked: string;
+  supplier: string;
+  createdAt: string;
+}
 
 // Type guard to check if product is a Product object or just an ID
 const isProductObject = (product: Product | string): product is Product => {
@@ -42,18 +43,18 @@ interface EditStockFormProps {
   productCache?: Record<string, Product>;
 }
 
-const EditStockForm: React.FC<EditStockFormProps> = ({ 
-  stock, 
-  onClose, 
-  onUpdate, 
-  productCache = {} 
+const EditStockForm: React.FC<EditStockFormProps> = ({
+  stock,
+  onClose,
+  onUpdate,
+  productCache = {}
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [infoMessage, setInfoMessage] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
   const modalRef = useRef<HTMLDivElement>(null);
-  
+
   // Initialize form data from the provided stock
   const [formData, setFormData] = useState({
     quantity: stock.quantity,
@@ -97,25 +98,10 @@ const EditStockForm: React.FC<EditStockFormProps> = ({
           setIsLoading(false);
           return;
         }
-        
+
         // Otherwise fetch products from API
-        const response = await fetch('http://localhost:3000/product/all-products', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch products');
-        }
-        
-        const data = await response.json();
-        
-        if (data.status === 'SUCCESS') {
-          setProducts(data.data);
-        } else {
-          throw new Error(data.message || 'Unknown error occurred');
-        }
+        const data = await fetchProducts(token);
+        setProducts(data);
       } catch (error) {
         console.error('Error loading products:', error);
         setErrorMessage('Failed to load products. Please try again.');
@@ -141,17 +127,17 @@ const EditStockForm: React.FC<EditStockFormProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Clear previous messages
     setErrorMessage('');
     setInfoMessage('');
-    
+
     // Check if form data has changed
     if (!hasFormChanged()) {
       setInfoMessage('No changes detected. Update skipped.');
       return;
     }
-    
+
     setIsLoading(true);
 
     try {
@@ -168,41 +154,28 @@ const EditStockForm: React.FC<EditStockFormProps> = ({
         ...(formData.quantity !== stock.quantity && { lastRestocked: new Date().toISOString() })
       };
 
-      const response = await fetch(`http://localhost:3000/stock/update-stock/${stock._id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(updateData)
-      });
+      await updateStock(stock._id, updateData, token);
 
-      const data = await response.json();
+      // Find the product in our cache or products array
+      const productData = isProductObject(stock.product)
+        ? stock.product
+        : (productCache[formData.product] || products.find(p => p._id === formData.product));
 
-      if (response.ok && data.status === 'SUCCESS') {
-        // Find the product in our cache or products array
-        const productData = isProductObject(stock.product) 
-          ? stock.product 
-          : (productCache[formData.product] || products.find(p => p._id === formData.product));
-        
-        // Create updated stock object with all properties
-        const updatedStock: Stock = {
-          ...stock,
-          ...updateData,
-          price: priceInCents, // Use the cents value
-          product: productData || stock.product,
-          // Keep other properties that weren't updated
-          _id: stock._id,
-          batchNumber: stock.batchNumber,
-          createdAt: stock.createdAt,
-          lastRestocked: updateData.lastRestocked || stock.lastRestocked,
-        };
-        
-        onUpdate(updatedStock);
-        onClose();
-      } else {
-        throw new Error(data.message || 'Failed to update stock');
-      }
+      // Create updated stock object with all properties
+      const updatedStock: Stock = {
+        ...stock,
+        ...updateData,
+        price: priceInCents, // Use the cents value
+        product: productData || stock.product,
+        // Keep other properties that weren't updated
+        _id: stock._id,
+        batchNumber: stock.batchNumber,
+        createdAt: stock.createdAt,
+        lastRestocked: updateData.lastRestocked || stock.lastRestocked,
+      };
+
+      onUpdate(updatedStock);
+      onClose();
     } catch (error) {
       console.error('Error updating stock:', error);
       setErrorMessage(error instanceof Error ? error.message : 'An error occurred while updating the stock. Please try again.');
@@ -226,7 +199,7 @@ const EditStockForm: React.FC<EditStockFormProps> = ({
         [name]: value
       }));
     }
-    
+
     // Clear info message when user starts making changes
     if (infoMessage) {
       setInfoMessage('');
@@ -238,13 +211,13 @@ const EditStockForm: React.FC<EditStockFormProps> = ({
     label: (
       <div className="flex items-center">
         {product.images && product.images.length > 0 && (
-          <img 
-            src={product.images[0]} 
-            alt={product.name} 
+          <img
+            src={product.images[0]}
+            alt={product.name}
             className="w-6 h-6 mr-2 rounded"
             onError={(e) => {
               (e.target as HTMLImageElement).style.display = 'none';
-            }} 
+            }}
           />
         )}
         <span>{product.name} ({product.productCode})</span>
@@ -283,7 +256,7 @@ const EditStockForm: React.FC<EditStockFormProps> = ({
               <span>{errorMessage}</span>
             </div>
           )}
-          
+
           {infoMessage && (
             <div className="mb-4 p-3 bg-blue-100 text-blue-700 rounded-lg flex items-center">
               <Info size={20} className="mr-2" />
@@ -392,7 +365,6 @@ const EditStockForm: React.FC<EditStockFormProps> = ({
                 title="Enter supplier name"
               />
             </div>
-            
           </div>
 
           <div className="mt-6 flex justify-end space-x-3">

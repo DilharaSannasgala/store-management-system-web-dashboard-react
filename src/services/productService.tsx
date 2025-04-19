@@ -15,6 +15,30 @@ try {
 return [];
 };
 
+export const fetchProductById = async (productId: string, token: string | null) => {
+  try {
+    const response = await fetch(`http://localhost:3000/product/${productId}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch product');
+    }
+
+    const data = await response.json();
+    if (data.status === 'SUCCESS') {
+      return data.data;
+    } else {
+      throw new Error(data.message || 'Unknown error occurred');
+    }
+  } catch (error) {
+    console.error('Error fetching product:', error);
+    throw error;
+  }
+};
+
 export const addProduct = async (productData: FormData, token: string | null) => {
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/product/add-product`, {

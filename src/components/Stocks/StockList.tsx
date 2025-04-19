@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Plus, AlertTriangle, Eye } from 'lucide-react';
 import DataTable from '../Common/Table/DataTable';
@@ -8,6 +8,8 @@ import AddStockForm from './AddStockForm';
 import EditStockForm from './EditStockForm';
 import ConfirmationModal from '../Common/Modal/ConfirmationModal';
 import { debounce } from 'lodash';
+import { fetchProductById, fetchProducts } from '../../services/productService';
+import { fetchAllStocks, deleteStock } from '../../services/stockService';
 
 interface Product {
   _id: string;
@@ -58,10 +60,10 @@ const StockList = () => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [stockToEdit, setStockToEdit] = useState<Stock | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
-  
+
   // Add product cache
   const [productCache, setProductCache] = useState<Record<string, Product>>({});
-  
+
   const [confirmation, setConfirmation] = useState<ConfirmationConfig>({
     isOpen: false,
     title: '',
@@ -74,25 +76,9 @@ const StockList = () => {
   const token = localStorage.getItem('token');
 
   // Function to fetch a single product by ID
-  const fetchProductById = useCallback(async (productId: string): Promise<Product | null> => {
+  const fetchProductByIdWrapper = useCallback(async (productId: string): Promise<Product | null> => {
     try {
-      const response = await fetch(`http://localhost:3000/product/${productId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch product');
-      }
-      
-      const data = await response.json();
-      
-      if (data.status === 'SUCCESS') {
-        return data.data;
-      } else {
-        throw new Error(data.message || 'Unknown error occurred');
-      }
+      return await fetchProductById(productId, token);
     } catch (error) {
       console.error('Error fetching product:', error);
       return null;
@@ -100,30 +86,15 @@ const StockList = () => {
   }, [token]);
 
   // Function to load all products and update the cache
-  const fetchAllProducts = useCallback(async () => {
+  const fetchAllProductsWrapper = useCallback(async () => {
     try {
-      const response = await fetch('http://localhost:3000/product/all-products', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      const products = await fetchProducts(token);
+      const newCache: Record<string, Product> = {};
+      products.forEach((product: Product) => {
+        newCache[product._id] = product;
       });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch products');
-      }
-      
-      const data = await response.json();
-      
-      if (data.status === 'SUCCESS') {
-        const newCache: Record<string, Product> = {};
-        data.data.forEach((product: Product) => {
-          newCache[product._id] = product;
-        });
-        setProductCache(newCache);
-        return newCache;
-      } else {
-        throw new Error(data.message || 'Unknown error occurred');
-      }
+      setProductCache(newCache);
+      return newCache;
     } catch (error) {
       console.error('Error fetching products:', error);
       return null;
@@ -142,7 +113,7 @@ const StockList = () => {
             return { ...stock, product: cache[productId] };
           } else {
             // Fetch if not in cache
-            const product = await fetchProductById(productId);
+            const product = await fetchProductByIdWrapper(productId);
             if (product) {
               // Update cache
               setProductCache(prev => ({ ...prev, [productId]: product }));
@@ -153,39 +124,29 @@ const StockList = () => {
         return stock;
       })
     );
-    
+
     return processedStocks;
-  }, [fetchProductById]);
+  }, [fetchProductByIdWrapper]);
 
   useEffect(() => {
     const fetchStocks = async () => {
       setIsLoading(true);
       setError(null);
-      
+
       try {
         // First, fetch and cache all products
-        const productCacheData = await fetchAllProducts();
-        
+        const productCacheData = await fetchAllProductsWrapper();
+
         // Then fetch stocks
-        const response = await fetch('http://localhost:3000/stock/all-stocks', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch stocks');
-        }
-        
-        const data = await response.json();
-        
-        if (data.status === 'SUCCESS') {
+        const stocksData = await fetchAllStocks(token);
+
+        if (stocksData) {
           // Process stocks to ensure product data
-          const processedStocks = await processStocks(data.data, productCacheData || {});
+          const processedStocks = await processStocks(stocksData, productCacheData || {});
           setStocks(processedStocks);
           setFilteredStocks(processedStocks);
         } else {
-          throw new Error(data.message || 'Unknown error occurred');
+          throw new Error('Unknown error occurred');
         }
       } catch (error) {
         setError(error instanceof Error ? error.message : 'An unknown error occurred');
@@ -195,7 +156,7 @@ const StockList = () => {
     };
 
     fetchStocks();
-  }, [token, fetchAllProducts, processStocks]);
+  }, [token, fetchAllProductsWrapper, processStocks]);
 
   const handleProductView = (product: Product) => {
     setSelectedProduct(product);
@@ -219,19 +180,10 @@ const StockList = () => {
 
   const performDelete = async (stock: Stock) => {
     try {
-      const response = await fetch(`http://localhost:3000/stock/delete-stock/${stock._id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to delete stock');
-      }
-      
+      await deleteStock(stock._id, token);
       setStocks(prev => prev.filter(s => s._id !== stock._id));
       setFilteredStocks(prev => prev.filter(s => s._id !== stock._id));
+      console.log('Stock deleted successfully');
     } catch (error) {
       setError(error instanceof Error ? error.message : 'An unknown error occurred');
     } finally {
@@ -248,7 +200,7 @@ const StockList = () => {
       stocks.filter(stock => {
         const productName = isProductObject(stock.product) ? stock.product.name.toLowerCase() : '';
         const productCode = isProductObject(stock.product) ? stock.product.productCode.toLowerCase() : '';
-        
+
         return productName.includes(query.toLowerCase()) ||
           productCode.includes(query.toLowerCase()) ||
           stock.batchNumber.toLowerCase().includes(query.toLowerCase()) ||
@@ -267,14 +219,14 @@ const StockList = () => {
     // If the new stock has just a product ID, fetch the full product data
     if (typeof newStock.product === 'string') {
       const productId = newStock.product;
-      
+
       // Try to get from cache first
       let productData = productCache[productId];
-      
+
       // If not in cache, fetch it
       if (!productData) {
-        productData = (await fetchProductById(productId)) as Product;
-        
+        productData = (await fetchProductByIdWrapper(productId)) as Product;
+
         // Update cache with the new product
         if (productData) {
           setProductCache(prev => ({
@@ -283,7 +235,7 @@ const StockList = () => {
           }));
         }
       }
-      
+
       // Update the stock with the full product data
       if (productData) {
         newStock = {
@@ -292,7 +244,7 @@ const StockList = () => {
         };
       }
     }
-    
+
     setStocks(prev => [...prev, newStock]);
     setFilteredStocks(prev => [...prev, newStock]);
     setShowAddForm(false);
@@ -313,8 +265,8 @@ const StockList = () => {
       accessor: (_item: Stock, index: number) => index + 1
     },
     { header: 'Batch Number', accessor: (item: Stock) => item.batchNumber },
-    { 
-      header: 'Product', 
+    {
+      header: 'Product',
       accessor: (item: Stock) => (
         <div className="flex items-center">
           {isProductObject(item.product) ? item.product.name : 'Loading...'}
@@ -331,29 +283,29 @@ const StockList = () => {
             </button>
           )}
         </div>
-      ) 
+      )
     },
     { header: 'Size', accessor: (item: Stock) => item.size },
-    { 
-      header: 'Quantity', 
+    {
+      header: 'Quantity',
       accessor: (item: Stock) => (
         <span className={item.quantity <= item.lowStockAlert ? 'text-red-600 font-medium' : ''}>
           {item.quantity}
         </span>
-      ) 
+      )
     },
-    { 
-      header: 'Price', 
+    {
+      header: 'Price',
       accessor: (item: Stock) => (
         <span>
           ${(item.price / 100).toFixed(2)}
         </span>
-      ) 
+      )
     },
     { header: 'Supplier', accessor: (item: Stock) => item.supplier },
-    { 
-      header: 'Last Restocked', 
-      accessor: (item: Stock) => item.lastRestocked ? formatDate(item.lastRestocked) : 'N/A' 
+    {
+      header: 'Last Restocked',
+      accessor: (item: Stock) => item.lastRestocked ? formatDate(item.lastRestocked) : 'N/A'
     }
   ];
 
@@ -433,10 +385,10 @@ const StockList = () => {
           <AnimatePresence>
             {showAddForm && (
               <AddStockForm
-              onClose={() => setShowAddForm(false)}
-              onSubmit={handleAddStock}
-              productCache={productCache}
-            />
+                onClose={() => setShowAddForm(false)}
+                onSubmit={handleAddStock}
+                productCache={productCache}
+              />
             )}
           </AnimatePresence>
 

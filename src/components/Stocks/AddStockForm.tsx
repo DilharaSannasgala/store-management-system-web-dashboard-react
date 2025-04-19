@@ -3,6 +3,8 @@ import { motion } from 'framer-motion';
 import { X, AlertTriangle } from 'lucide-react';
 import LoadingSpinner from '../Loading/LoadingSpinner';
 import Select from 'react-select';
+import { addStock } from '../../services/stockService';
+import { fetchProducts } from '../../services/productService';
 
 interface Product {
   _id: string;
@@ -29,6 +31,13 @@ interface Stock {
   createdAt: string;
 }
 
+interface StockData {
+  product: string;
+  quantity: number;
+  size: string;
+  price: number;
+  supplier: string;
+}
 
 interface AddStockFormProps {
   onClose: () => void;
@@ -39,7 +48,7 @@ interface AddStockFormProps {
 const AddStockForm: React.FC<AddStockFormProps> = ({ onClose, onSubmit, productCache = {} }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<StockData>({
     product: '',
     quantity: 0,
     size: '',
@@ -64,23 +73,8 @@ const AddStockForm: React.FC<AddStockFormProps> = ({ onClose, onSubmit, productC
         }
 
         // Otherwise fetch products from API
-        const response = await fetch('http://localhost:3000/product/all-products', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch products');
-        }
-
-        const data = await response.json();
-
-        if (data.status === 'SUCCESS') {
-          setProducts(data.data);
-        } else {
-          throw new Error(data.message || 'Unknown error occurred');
-        }
+        const data = await fetchProducts(token);
+        setProducts(data);
       } catch (error) {
         console.error('Error loading products:', error);
         setErrorMessage('Failed to load products. Please try again.');
@@ -113,23 +107,14 @@ const AddStockForm: React.FC<AddStockFormProps> = ({ onClose, onSubmit, productC
       // Convert price to cents for storage (assuming this is the API expectation)
       const priceInCents = Math.round(formData.price * 100);
 
-      const stockData = {
+      const stockData: StockData = {
         ...formData,
         price: priceInCents
       };
 
-      const response = await fetch('http://localhost:3000/stock/add-stock', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(stockData)
-      });
+      const result = await addStock(stockData, token);
 
-      const data = await response.json();
-
-      if (response.ok && data.status === 'SUCCESS') {
+      if (result) {
         if (onSubmit) {
           // Find the product in our products array or cache
           const selectedProduct = productCache[formData.product] ||
@@ -137,19 +122,19 @@ const AddStockForm: React.FC<AddStockFormProps> = ({ onClose, onSubmit, productC
 
           // If product data is available, add it to the stock data that's passed back
           const enrichedStockData = {
-            ...data.data,
-            product: selectedProduct || data.data.product
+            ...result,
+            product: selectedProduct || result.product
           };
 
           onSubmit(enrichedStockData);
         }
         onClose();
       } else {
-        throw new Error(data.message || 'Failed to add stock');
+        setErrorMessage('Failed to add stock. Please try again.');
       }
     } catch (error) {
       console.error('Error adding stock:', error);
-      setErrorMessage(error instanceof Error ? error.message : 'An error occurred while adding the stock. Please try again.');
+      setErrorMessage('An error occurred while adding the stock. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -202,8 +187,6 @@ const AddStockForm: React.FC<AddStockFormProps> = ({ onClose, onSubmit, productC
       </div>
     ),
   }));
-
-  
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -293,36 +276,36 @@ const AddStockForm: React.FC<AddStockFormProps> = ({ onClose, onSubmit, productC
             </div>
 
             <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Price (in $)*
-                </label>
-                <input
-                  type="number"
-                  name="price"
-                  value={formData.price}
-                  onChange={handleChange}
-                  min="0"
-                  step="0.1"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  required
-                  title="Enter price"
-                />
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Price (in $)*
+              </label>
+              <input
+                type="number"
+                name="price"
+                value={formData.price}
+                onChange={handleChange}
+                min="0"
+                step="0.1"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                required
+                title="Enter price"
+              />
             </div>
 
             <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Supplier*
-                </label>
-                <input
-                  type="text"
-                  name="supplier"
-                  value={formData.supplier}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  required
-                  placeholder="Enter supplier name"
-                  title="Enter supplier name"
-                />
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Supplier*
+              </label>
+              <input
+                type="text"
+                name="supplier"
+                value={formData.supplier}
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                required
+                placeholder="Enter supplier name"
+                title="Enter supplier name"
+              />
             </div>
           </div>
 
