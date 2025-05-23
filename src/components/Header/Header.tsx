@@ -24,6 +24,8 @@ const Header: React.FC<HeaderProps> = ({ userName, userEmail }) => {
         return { title: 'Customers', subtitle: 'Manage your customers' };
       case '/orders':
         return { title: 'Orders', subtitle: 'View and manage orders' };
+      case '/recycle-bin':
+        return { title: 'Recycle Bin', subtitle: 'Manage deleted items' };
       default:
         return { title: 'Dashboard', subtitle: 'Welcome back' };
     }
