@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import LoadingSpinner from '../Loading/LoadingSpinner';
 import { loginUser } from '../../services/authService';
+
 interface UserData {
   id: string;
   email: string;
@@ -17,6 +19,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,6 +34,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
       localStorage.setItem('userData', JSON.stringify(data.user));
       // Call the onLogin handler from parent component
       onLogin(data.user, data.token);
+      // Navigate to dashboard
+      navigate('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred');
     } finally {
@@ -108,11 +113,12 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
 
           <motion.button
             whileHover={{ scale: 1.01 }}
-         whileTap={{ scale: 0.99 }}
+            whileTap={{ scale: 0.99 }}
             type="submit"
             className="w-full bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors"
+            disabled={isLoading}
           >
-            Log in
+            {isLoading ? 'Logging in...' : 'Log in'}
           </motion.button>
         </form>
       </motion.div>

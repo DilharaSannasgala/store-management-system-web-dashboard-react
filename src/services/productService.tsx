@@ -1,6 +1,6 @@
 export const fetchProducts = async (token: string | null) => {
 try {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/product/all-products`, {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/products/all-products`, {
     headers: {
         'Authorization': `Bearer ${token}`
     }
@@ -17,7 +17,7 @@ return [];
 
 export const fetchProductById = async (productId: string, token: string | null) => {
   try {
-    const response = await fetch(`http://localhost:3000/product/${productId}`, {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/products/${productId}`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -41,7 +41,7 @@ export const fetchProductById = async (productId: string, token: string | null) 
 
 export const addProduct = async (productData: FormData, token: string | null) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/product/add-product`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/products/add-product`, {
         method: 'POST',
         body: productData,
         headers: {
@@ -62,7 +62,7 @@ export const addProduct = async (productData: FormData, token: string | null) =>
 
   export const updateProduct = async (productId: string, productData: FormData, token: string | null) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/product/update-product/${productId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/products/update-product/${productId}`, {
         method: 'PUT',
         body: productData,
         headers: {
@@ -83,7 +83,7 @@ export const addProduct = async (productData: FormData, token: string | null) =>
 
 export const deleteProduct = async (productId: string, token: string | null) => {
 try {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/product/delete-product/${productId}`, {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/products/delete-product/${productId}`, {
     method: 'DELETE',
     headers: {
         'Authorization': `Bearer ${token}`

@@ -1,6 +1,6 @@
 export const addCategory = async (name: string, description: string, token: string | null) => {
   try {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/category/add-category`, {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/categories/add-category`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -28,7 +28,7 @@ export const addCategory = async (name: string, description: string, token: stri
 
 export const fetchCategories = async (token: string | null) => {
   try {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/category/all-categories`, {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/categories/all-categories`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -45,7 +45,7 @@ export const fetchCategories = async (token: string | null) => {
 
 export const fetchCategoryById = async (categoryId: string, token: string | null) => {
   try {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/category/${categoryId}`, {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/categories/${categoryId}`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -62,7 +62,7 @@ export const fetchCategoryById = async (categoryId: string, token: string | null
 
 export const updateCategory = async (categoryId: string, name: string, description: string, token: string | null) => {
   try {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/category/update-category/${categoryId}`, {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/categories/update-category/${categoryId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -90,7 +90,7 @@ export const updateCategory = async (categoryId: string, name: string, descripti
 
 export const deleteCategory = async (categoryId: string, token: string | null) => {
   try {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/category/delete-category/${categoryId}`, {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/categories/delete-category/${categoryId}`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${token}`

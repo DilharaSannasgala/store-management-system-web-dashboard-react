@@ -1,6 +1,6 @@
 export const fetchCustomers = async (token: string | null) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/customer/all-customers`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/customers/all-customers`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -24,7 +24,7 @@ export const fetchCustomers = async (token: string | null) => {
   
   export const deleteCustomer = async (customerId: string, token: string | null) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/customer/delete-customer/${customerId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/customers/delete-customer/${customerId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`

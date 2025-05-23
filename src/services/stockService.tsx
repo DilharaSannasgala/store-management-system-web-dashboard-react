@@ -8,7 +8,7 @@ interface StockData {
 
 export const fetchAllStocks = async (token: string | null) => {
     try {
-      const response = await fetch('http://localhost:3000/stock/all-stocks', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/stock/all-stocks`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -54,7 +54,7 @@ export const fetchAllStocks = async (token: string | null) => {
   
   export const updateStock = async (stockId: string, updateData: Partial<StockData>, token: string | null) => {
     try {
-      const response = await fetch(`http://localhost:3000/stock/update-stock/${stockId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/stock/update-stock/${stockId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -78,7 +78,7 @@ export const fetchAllStocks = async (token: string | null) => {
   
   export const deleteStock = async (stockId: string, token: string | null) => {
     try {
-      const response = await fetch(`http://localhost:3000/stock/delete-stock/${stockId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/stock/delete-stock/${stockId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`

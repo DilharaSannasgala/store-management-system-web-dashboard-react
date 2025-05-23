@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Package, Users, FileText, DollarSign } from 'lucide-react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar/Sidebar';
 import Header from './components/Header/Header';
-import StatCard from './components/Dashboard/StatCard';
-import GenderChart from './components/Dashboard/Charts/GenderChart';
-import CategoryChart from './components/Dashboard/Charts/CategoryChart';
 import LoginScreen from './components/Auth/LoginScreen';
+import Dashboard from './components/Dashboard/Dashboard';
 import ProductList from './components/Products/ProductList';
 import CategoryList from './components/Categories/CategoryList';
 import CustomerList from './components/Customers/CustomerList';
@@ -13,13 +11,41 @@ import StockList from './components/Stocks/StockList';
 import OrderList from './components/Order/OrderList';
 
 export interface UserData {
-  name: string;
+  id: string;
+  name?: string;
   email: string;
 }
 
+// Protected Route wrapper
+const ProtectedRoute: React.FC<{ children: React.ReactNode; isLoggedIn: boolean }> = ({ 
+  children, 
+  isLoggedIn 
+}) => {
+  return isLoggedIn ? <>{children}</> : <Navigate to="/login" replace />;
+};
+
+// Layout component for authenticated pages
+const Layout: React.FC<{ 
+  children: React.ReactNode; 
+  userData: UserData | null; 
+  onLogout: () => void;
+}> = ({ children, userData, onLogout }) => {
+  return (
+    <div className="flex min-h-screen bg-gray-100">
+      <Sidebar onLogout={onLogout} />
+      <div className="flex-1 ml-64">
+        <Header 
+          userName={userData?.name || userData?.email || 'User'} 
+          userEmail={userData?.email} 
+        />
+        {children}
+      </div>
+    </div>
+  );
+};
+
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [currentPage, setCurrentPage] = useState('dashboard');
   const [userData, setUserData] = useState<UserData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -33,7 +59,7 @@ function App() {
     }
     
     // Verify token with backend using environment variable
-    fetch(`${import.meta.env.VITE_API_URL}/user/verify-token`, {
+    fetch(`${import.meta.env.VITE_API_URL}/auth/verify-token`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`
@@ -84,56 +110,105 @@ function App() {
     );
   }
 
-  if (!isLoggedIn) {
-    return <LoginScreen onLogin={handleLogin} />;
-  }
-
-  const renderPage = () => {
-    switch (currentPage) {
-      case 'products':
-        return <ProductList />;
-      case 'stocks':
-        return <StockList />;
-      case 'categories':
-        return <CategoryList />;
-      case 'customers':
-        return <CustomerList />;
-      case 'orders':
-        return <OrderList/>;
-      default:
-        return (
-          <main className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-              <StatCard title="Products" value="54" icon={<Package />} />
-              <StatCard title="Customers" value="541" icon={<Users />} />
-              <StatCard title="Orders" value="54" icon={<FileText />} />
-              <StatCard title="Revenue" value="$ 150K" icon={<DollarSign />} />
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <GenderChart />
-              <CategoryChart />
-            </div>
-          </main>
-        );
-    }
-  };
-
   return (
-    <div className="flex min-h-screen bg-gray-100">
-      <Sidebar 
-        onNavigate={setCurrentPage} 
-        currentPage={currentPage} 
-        onLogout={handleLogout}
-      />
-      <div className="flex-1">
-        <Header 
-          currentPage={currentPage} 
-          userName={userData?.name || 'User'} 
-          userEmail={userData?.email} 
+    <Router>
+      <Routes>
+        {/* Login Route */}
+        <Route 
+          path="/login" 
+          element={
+            isLoggedIn ? (
+              <Navigate to="/dashboard" replace />
+            ) : (
+              <LoginScreen onLogin={handleLogin} />
+            )
+          } 
         />
-        {renderPage()}
-      </div>
-    </div>
+        
+        {/* Protected Routes */}
+        <Route 
+          path="/dashboard" 
+          element={
+            <ProtectedRoute isLoggedIn={isLoggedIn}>
+              <Layout userData={userData} onLogout={handleLogout}>
+                <Dashboard />
+              </Layout>
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
+          path="/products" 
+          element={
+            <ProtectedRoute isLoggedIn={isLoggedIn}>
+              <Layout userData={userData} onLogout={handleLogout}>
+                <ProductList />
+              </Layout>
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
+          path="/stocks" 
+          element={
+            <ProtectedRoute isLoggedIn={isLoggedIn}>
+              <Layout userData={userData} onLogout={handleLogout}>
+                <StockList />
+              </Layout>
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
+          path="/categories" 
+          element={
+            <ProtectedRoute isLoggedIn={isLoggedIn}>
+              <Layout userData={userData} onLogout={handleLogout}>
+                <CategoryList />
+              </Layout>
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
+          path="/customers" 
+          element={
+            <ProtectedRoute isLoggedIn={isLoggedIn}>
+              <Layout userData={userData} onLogout={handleLogout}>
+                <CustomerList />
+              </Layout>
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
+          path="/orders" 
+          element={
+            <ProtectedRoute isLoggedIn={isLoggedIn}>
+              <Layout userData={userData} onLogout={handleLogout}>
+                <OrderList />
+              </Layout>
+            </ProtectedRoute>
+          } 
+        />
+        
+        {/* Default redirect */}
+        <Route 
+          path="/" 
+          element={
+            <Navigate to={isLoggedIn ? "/dashboard" : "/login"} replace />
+          } 
+        />
+        
+        {/* Catch all route */}
+        <Route 
+          path="*" 
+          element={
+            <Navigate to={isLoggedIn ? "/dashboard" : "/login"} replace />
+          } 
+        />
+      </Routes>
+    </Router>
   );
 }
 

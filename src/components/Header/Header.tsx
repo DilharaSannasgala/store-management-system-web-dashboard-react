@@ -1,43 +1,35 @@
 import React from 'react';
+import { useLocation } from 'react-router-dom';
 
 interface HeaderProps {
-  currentPage: string;
   userName: string;
   userEmail?: string;
 }
 
-const Header: React.FC<HeaderProps> = ({ currentPage, userName, userEmail }) => {
-  let title, subtitle;
+const Header: React.FC<HeaderProps> = ({ userName, userEmail }) => {
+  const location = useLocation();
+  
+  // Get page title and subtitle from current route
+  const getPageInfo = (pathname: string) => {
+    switch (pathname) {
+      case '/dashboard':
+        return { title: 'Dashboard', subtitle: 'Welcome back' };
+      case '/products':
+        return { title: 'Products', subtitle: 'Manage your product inventory' };
+      case '/stocks':
+        return { title: 'Stocks', subtitle: 'Manage your stock levels' };
+      case '/categories':
+        return { title: 'Categories', subtitle: 'Manage product categories' };
+      case '/customers':
+        return { title: 'Customers', subtitle: 'Manage your customers' };
+      case '/orders':
+        return { title: 'Orders', subtitle: 'View and manage orders' };
+      default:
+        return { title: 'Dashboard', subtitle: 'Welcome back' };
+    }
+  };
 
-  switch (currentPage) {
-    case 'dashboard':
-      title = 'Dashboard';
-      subtitle = 'Welcome back';
-      break;
-    case 'products':
-      title = 'Products';
-      subtitle = 'Manage your product inventory';
-      break;
-    case 'stocks':
-      title = 'Stocks';
-      subtitle = 'Manage your stock levels';
-      break;
-    case 'categories':
-      title = 'Categories';
-      subtitle = 'Manage product categories';
-      break;
-    case 'customers':
-      title = 'Customers';
-      subtitle = 'Manage your customers';
-      break;
-    case 'orders':
-      title = 'Orders';
-      subtitle = 'View and manage orders';
-      break;
-    default:
-      title = 'Dashboard';
-      subtitle = 'Welcome back';
-  }
+  const { title, subtitle } = getPageInfo(location.pathname);
 
   return (
     <div className="bg-white p-4 flex justify-between items-center shadow-sm">

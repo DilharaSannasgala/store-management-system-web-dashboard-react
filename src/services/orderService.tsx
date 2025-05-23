@@ -1,6 +1,6 @@
 export const fetchOrders = async (token: string | null) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/order/all-orders`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/orders/all-orders`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -24,7 +24,7 @@ export const fetchOrders = async (token: string | null) => {
   
   export const updateOrderStatus = async (orderId: string, newStatus: string, token: string | null) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/order/update-order/${orderId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/orders/update-order/${orderId}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -51,7 +51,7 @@ export const fetchOrders = async (token: string | null) => {
   
   export const deleteOrder = async (orderId: string, token: string | null) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/order/delete-order/${orderId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/orders/delete-order/${orderId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`

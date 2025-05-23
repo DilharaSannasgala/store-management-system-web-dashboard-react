@@ -5,9 +5,10 @@ interface StatCardProps {
   title: string;
   value: string | number;
   icon: React.ReactNode;
+  isLoading?: boolean;
 }
 
-const StatCard: React.FC<StatCardProps> = ({ title, value, icon }) => {
+const StatCard: React.FC<StatCardProps> = ({ title, value, icon, isLoading = false }) => {
   return (
     <motion.div
       initial={{ scale: 0.9, opacity: 0 }}
@@ -17,7 +18,11 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon }) => {
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-gray-500 text-sm">{title}</h3>
-          <p className="text-2xl font-bold mt-1">{value}</p>
+          {isLoading ? (
+            <div className="w-16 h-8 bg-gray-200 animate-pulse rounded mt-1"></div>
+          ) : (
+            <p className="text-2xl font-bold mt-1">{value}</p>
+          )}
         </div>
         <div className="bg-indigo-100 p-3 rounded-full text-indigo-600">
           {icon}
